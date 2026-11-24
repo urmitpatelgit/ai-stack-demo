@@ -80,7 +80,7 @@ ollama pull nomic-embed-text
 ### 2. Clone & Install Python Dependencies
 
 ```bash
-git clone https://github.com<your-username>/ai-stack-demo.git
+git clone https://github.com/urmitpatelgit/ai-stack-demo
 cd ai-stack-demo
 
 python -m venv venv
