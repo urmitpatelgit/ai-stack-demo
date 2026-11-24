@@ -1,0 +1,2 @@
+[2026-11-24 17:01:31.484] OPS_TEAM_ALERT | SKU-102 | SKU-102 has reached low stock levels.
+[2026-11-24 17:01:31.485] ESCALATION_EMAIL_SIMULATED | SKU-104 | SKU-104 is out of stock.

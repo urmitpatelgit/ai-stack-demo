@@ -1,0 +1,10 @@
+WAREHOUSE INVENTORY & ESCALATION STANDARD OPERATING PROCEDURE
+
+1. OUT OF STOCK POLICY (0 units):
+If any product has 0 units and shows Status: OUT OF STOCK, you MUST call send_escalation_email immediately. Do NOT call send_team_alert for out-of-stock items.
+
+2. LOW STOCK POLICY (1 to 9 units):
+If any product has between 1 and 9 units and shows Status: LOW STOCK, you MUST call send_team_alert to inform the operations team. Do NOT call send_escalation_email for low-stock items.
+
+3. HEALTHY STOCK POLICY (10 or more units):
+If any product has 10 or more units and shows Status: HEALTHY STOCK, take NO action and do NOT send any alert or email.
