@@ -51,6 +51,7 @@ Instead of jumping straight into complex code, this repository is organized into
 | **LangChain** | Connects prompts, local models, vector retrievers, and MCP adapters | `create_agent` + `langchain-mcp-adapters` |
 | **LangGraph** | Multi-agent state orchestration, streaming, and Human-in-the-Loop pauses | `StateGraph` + `MemorySaver` + `interrupt_before` |
 | **Streamlit** | Interactive web frontend for live streaming, CSV editing, and approvals | `streamlit_app.py` |
+| **Pytest** | Automated unit, mock SMTP, and thread-concurrency testing for MCP tools | `tests/test_mcp_server.py` + `pyproject.toml` |
 
 ---
 
@@ -58,17 +59,21 @@ Instead of jumping straight into complex code, this repository is organized into
 
 ```text
 ai-stack-demo/
-├── mcp_server.py           # Shared FastMCP tool server (CSV lookup, alerts, email, audit log)
-├── inventory.csv           # Sample warehouse SKU stock dataset
-├── company_policies.txt    # SOP rules indexed into the local RAG vector store
+├── mcp_server.py              # Shared FastMCP tool server (CSV lookup, alerts, email, audit log)
+├── inventory.csv              # Sample warehouse SKU stock dataset
+├── company_policies.txt       # SOP rules indexed into the local RAG vector store
 │
-├── agent_app.py            # [Step 1] Single-Agent CLI (LLM + RAG + MCP)
-├── multi_agent_app.py      # [Step 2] Multi-Agent CLI (LangGraph Auditor -> Dispatcher)
-├── streamlit_app.py        # [Step 3] Full-Stack Web UI + Streaming + Human-in-the-Loop
+├── agent_app.py               # [Step 1] Single-Agent CLI (LLM + RAG + MCP)
+├── multi_agent_app.py         # [Step 2] Multi-Agent CLI (LangGraph Auditor -> Dispatcher)
+├── streamlit_app.py           # [Step 3] Full-Stack Web UI + Streaming + Human-in-the-Loop
 │
-├── requirements.txt        # Python dependencies
-├── README.md               # Step-by-step learning guide
-└── .gitignore              # Excludes venv, cache, and runtime logs
+├── tests/
+│   └── test_mcp_server.py     # Automated pytest suite (thresholds, mocked SMTP, concurrency)
+│
+├── pyproject.toml             # Pytest path and warning configuration
+├── requirements.txt           # Python dependencies
+├── README.md                  # Step-by-step learning guide
+└── .gitignore                 # Excludes venv, cache, and runtime logs
 ```
 
 ---
@@ -86,7 +91,7 @@ ollama pull nomic-embed-text
 ### 2. Clone Repository & Install Python Dependencies
 
 ```bash
-git clone https://github.com<your-username>/ai-stack-demo.git
+git clone https://github.com/urmitpatelgit/ai-stack-demo
 cd ai-stack-demo
 
 python -m venv venv
@@ -140,6 +145,16 @@ pip install -r requirements.txt
   streamlit run streamlit_app.py
   ```
   Open `http://localhost:8501` in your browser to run audits, edit `inventory.csv` live, and inspect `audit_log.txt`.
+
+---
+
+## Running Automated Tests
+
+The `tests/` directory verifies stock threshold classifications, CSV parsing, simulated vs. mocked Gmail SMTP delivery, and thread-safe concurrent logging without touching real data files:
+
+```bash
+pytest -v
+```
 
 ---
 
