@@ -1,156 +1,123 @@
-# Agentic Inventory Auditor
+# Multi-Agent Inventory Operations Dashboard (Local AI Stack)
 
-This project demonstrates an agentic inventory audit using a local LLM, retrieval-augmented generation (RAG), LangChain tools, and the Model Context Protocol (MCP).
+An end-to-end **Agentic AI** project built 100% locally and free using **Ollama**, **LangChain**, **LangGraph**, **RAG**, **Model Context Protocol (MCP)**, and **Streamlit**.
 
-The application reads inventory data and company policy, asks a local LLM to decide what action each SKU requires, and performs allowed operations through an MCP server.
+The application audits warehouse inventory (`inventory.csv`) against company Standard Operating Procedures (`company_policies.txt`), pauses for **Human-in-the-Loop (HITL)** approval in a live web dashboard, and dispatches alerts or escalation emails through a standalone **MCP server**.
 
-## Architecture
+---
 
-```mermaid
-flowchart LR
-    User[User / Terminal] --> App[agent_app.py]
+## Architecture Overview
 
-    subgraph Agent["LangChain Agent"]
-        App --> LLM[Qwen 2.5 3B via Ollama]
-        App --> RAG[Policy RAG Tool]
-    end
-
-    Policy[company_policies.txt] --> Split[Text Chunking]
-    Split --> Embed[Nomic Embed Text via Ollama]
-    Embed --> Vector[In-Memory Vector Store]
-    RAG --> Vector
-
-    App -->|MCP over stdio| Server[mcp_server.py]
-    Server --> Inventory[inventory.csv]
-    Server --> Audit[audit_log.txt]
-    Server -->|If configured| Email[Gmail SMTP]
+```text
+┌───────────────────────────────────────────────────────────────────┐
+│                    STREAMLIT WEB UI (streamlit_app.py)            │
+│   • Live Streaming Output   • Human-in-the-Loop Approve / Reject  │
+│   • Interactive CSV Editor  • Real-Time Audit Log Viewer          │
+└─────────────────────────────────┬─────────────────────────────────┘
+                                  │
+                                  ▼
+┌───────────────────────────────────────────────────────────────────┐
+│               LANGGRAPH MULTI-AGENT ORCHESTRATOR                  │
+│                                                                   │
+│  [START] ──▶ [Node 1: Auditor Agent] ──▶ (HITL Checkpoint)        │
+│                   │                            │                  │
+│                   ▼                     [Approve / Reject]        │
+│          RAG Vector Store                      │                  │
+│       (company_policies.txt)                   ▼                  │
+│                                     [Node 2: Dispatcher Agent]    │
+│                                                │                  │
+│                                                ▼                  │
+│                                              [END]                │
+└─────────────────────────────────┬─────────────────────────────────┘
+                                  │ (MCP over stdio)
+                                  ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                  MCP TOOL SERVER (mcp_server.py)                  │
+│  • get_all_inventory()       ──▶ Reads inventory.csv              │
+│  • send_team_alert()         ──▶ Writes thread-safe audit_log.txt │
+│  • send_escalation_email()   ──▶ Gmail SMTP or audit_log.txt      │
+└───────────────────────────────────────────────────────────────────┘
 ```
 
-### Component Responsibilities
+---
 
-- `agent_app.py` creates the LangChain agent and runs the complete inventory audit.
-- `qwen2.5:3b` served by Ollama selects tools and follows the system prompt.
-- `company_policies.txt` contains the warehouse stock and escalation rules.
-- Policy text is split into overlapping chunks, embedded with `nomic-embed-text`, and stored in memory for semantic retrieval.
-- `mcp_server.py` exposes inventory and notification operations as FastMCP tools.
-- `inventory.csv` is the source of product IDs and stock counts.
-- `audit_log.txt` records team alerts and simulated or actual escalation email actions.
-- The MCP server communicates with the agent application through standard input/output (`stdio`).
+## Tech Stack & Core Concepts
 
-### Audit Flow
+* **LLM & GenAI ([Ollama](https://ollama.com)):** Runs `qwen2.5:3b` locally on CPU with zero API costs.
+* **RAG ([LangChain Core](https://langchain.com)):** Loads and chunks `company_policies.txt` using `RecursiveCharacterTextSplitter`, embeds chunks with `nomic-embed-text`, and retrieves rules via `InMemoryVectorStore`.
+* **Connectivity ([Model Context Protocol](https://modelcontextprotocol.io)):** Decouples business tools (`mcp_server.py`) from the AI agents using FastMCP over `stdio`.
+* **Multi-Agent Orchestration & HITL ([LangGraph](https://langchain.comlanggraph)):** Splits responsibilities between a read-only **Auditor Agent** and an action-taking **Dispatcher Agent**, using `MemorySaver` and `interrupt_before` to require human sign-off before notifications fire.
+* **Frontend ([Streamlit](https://streamlit.io)):** Streams agent steps live, supports inline editing of `inventory.csv`, and displays thread-safe execution logs.
 
-1. The agent receives the request to audit every inventory SKU.
-2. The agent retrieves the relevant rules from `company_policies.txt` once.
-3. The agent calls `get_all_inventory` once to load the CSV and classify each SKU.
-4. The stock status determines the action:
-   - `OUT OF STOCK` - call `send_escalation_email`
-   - `LOW STOCK` - call `send_team_alert`
-   - `HEALTHY STOCK` - take no action
-5. Intermediate tool calls and results are printed to the terminal.
-6. The final audit summary is returned by the agent.
+---
 
-## Prerequisites
+## Project Structure
 
-- Windows PowerShell
-- Python 3.10 or newer
-- [Ollama](https://ollama.com/) installed and running
-- The following Ollama models:
-  - `qwen2.5:3b`
-  - `nomic-embed-text`
+```text
+ai-stack-demo/
+├── streamlit_app.py        # Main Streamlit dashboard + LangGraph HITL multi-agent app
+├── multi_agent_app.py      # CLI version of the LangGraph multi-agent workflow
+├── agent_app.py            # CLI version of the single-agent RAG + MCP prototype
+├── mcp_server.py           # Standalone FastMCP server exposing inventory & alert tools
+├── inventory.csv           # Sample warehouse SKU stock dataset
+├── company_policies.txt    # SOP rules indexed into the local RAG vector store
+├── requirements.txt        # Python dependencies
+└── .gitignore              # Excludes venv, cache, and runtime logs
+```
 
-Pull the required models with:
+---
 
-```powershell
+## Quickstart Guide
+
+### 1. Prerequisites
+Install [Ollama](https://ollama.com) and pull the two local models:
+
+```bash
 ollama pull qwen2.5:3b
 ollama pull nomic-embed-text
 ```
 
-Verify that Ollama is running:
+### 2. Clone & Install Python Dependencies
 
-```powershell
-ollama list
-```
+```bash
+git clone https://github.com<your-username>/ai-stack-demo.git
+cd ai-stack-demo
 
-## Run Locally
-
-Open PowerShell in the project directory.
-
-### 1. Create a Virtual Environment
-
-```powershell
 python -m venv venv
+# Windows (PowerShell):
+.\venv\Scripts\activate
+# macOS / Linux:
+# source venv/bin/activate
+
+pip install -r requirements.txt
 ```
 
-### 2. Activate the Virtual Environment
+### 3. Run the Streamlit Web Dashboard
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Open `http://localhost:8501` in your browser, click **Start Inventory Audit (Node 1)**, review the streamed Auditor Report, and click **Approve & Dispatch Alerts (Node 2)** to trigger the MCP tools.
+
+---
+
+## Optional: Enable Real Gmail Escalation Emails
+
+By default, `send_escalation_email` safely logs simulated emails to `audit_log.txt`. To send real emails via Gmail SMTP, set these environment variables before launching Streamlit:
 
 ```powershell
-.\venv\Scripts\Activate.ps1
+# Windows PowerShell
+\$env:GMAIL_USER="your_email@gmail.com"
+\$env:GMAIL_APP_PASSWORD="your-16-char-app-password"
+\$env:ESCALATION_RECIPIENT="recipient@gmail.com"
+streamlit run streamlit_app.py
 ```
 
-If PowerShell blocks activation scripts, you can run:
+---
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\venv\Scripts\Activate.ps1
-```
+## Key Engineering Takeaways
 
-### 3. Install Dependencies
-
-```powershell
-python -m pip install --upgrade pip
-python -m pip install langchain langchain-ollama langchain-core langchain-text-splitters langchain-mcp-adapters mcp
-```
-
-### 4. Start Ollama
-
-Open Ollama from the Start menu or run:
-
-```powershell
-ollama serve
-```
-
-Keep this process running in a separate terminal.
-
-### 5. Run the Audit
-
-```powershell
-python agent_app.py
-```
-
-The program starts `mcp_server.py` as a child process, performs the policy-guided audit, and prints agent actions, tool results, and the final summary.
-
-## Optional Gmail Escalation
-
-By default, when no SMTP credentials are available, an escalation email is simulated and written to `audit_log.txt`.
-
-To enable the email attempt, set these environment variables in PowerShell before running the application:
-
-```powershell
-$env:GMAIL_USER = "your-address@gmail.com"
-$env:GMAIL_APP_PASSWORD = "your-gmail-app-password"
-$env:ESCALATION_RECIPIENT = "operations-team@example.com"
-python agent_app.py
-```
-
-`ESCALATION_RECIPIENT` is optional. If omitted, the value of `GMAIL_USER` is used.
-
-Do not commit Gmail passwords or app passwords to source control.
-
-## Project Files
-
-| File | Purpose |
-| --- | --- |
-| `agent_app.py` | LangChain agent, local LLM configuration, RAG setup, and audit loop |
-| `mcp_server.py` | FastMCP inventory, alert, and escalation tools |
-| `company_policies.txt` | Warehouse policy used by RAG retrieval |
-| `inventory.csv` | Product inventory input |
-| `audit_log.txt` | Timestamped alert and escalation history |
-| `venv/` | Local Python virtual environment |
-
-## Troubleshooting
-
-- **Ollama connection fails:** Confirm `ollama serve` is running and port `11434` is available.
-- **Model not found:** Run `ollama pull qwen2.5:3b` and `ollama pull nomic-embed-text`.
-- **MCP server cannot start:** Run `python mcp_server.py` once to verify the server can initialize.
-- **No SMTP credentials:** The escalation is intentionally logged as simulated instead of being sent.
-- **CSV or policy file changes are not reflected:** Restart `agent_app.py`; policy chunks and RAG data are rebuilt at startup.
+* **Tool-Side Status Classification:** Offloading deterministic threshold math (`0` -> `OUT OF STOCK`, `< 10` -> `LOW STOCK`) to the MCP tool eliminates numeric reasoning errors in compact 3B local LLMs.
+* **Thread-Safe MCP File I/O:** Because LLMs invoke multiple MCP tools in parallel, `mcp_server.py` uses `threading.Lock()` to prevent race conditions when writing to `audit_log.txt`.
+* **Role Separation via LangGraph:** Splitting read tools (Auditor) from write tools (Dispatcher) behind a human approval checkpoint prevents unintended side effects.
