@@ -1,23 +1,23 @@
-# Multi-Agent Inventory Operations Dashboard (Local AI Stack)
+# Local Agentic AI Stack: Step-by-Step Learning Project
 
-An end-to-end **Agentic AI** project built 100% locally and free using **Ollama**, **LangChain**, **LangGraph**, **RAG**, **Model Context Protocol (MCP)**, and **Streamlit**.
+A hands-on, 100% free and local AI engineering project demonstrating how **LLM (GenAI)**, **RAG**, **Model Context Protocol (MCP)**, **LangChain**, **LangGraph**, and **Streamlit** fit together in a real-world warehouse inventory auditing workflow.
 
-The application audits warehouse inventory (`inventory.csv`) against company Standard Operating Procedures (`company_policies.txt`), pauses for **Human-in-the-Loop (HITL)** approval in a live web dashboard, and dispatches alerts or escalation emails through a standalone **MCP server**.
+Instead of jumping straight into complex code, this repository is organized into **three progressive learning steps**—allowing you to run each milestone and see *why* each architectural layer is added.
 
 ---
 
-## Architecture Overview
+## System Architecture
 
 ```text
 ┌───────────────────────────────────────────────────────────────────┐
-│                    STREAMLIT WEB UI (streamlit_app.py)            │
+│                STEP 3: STREAMLIT WEB UI (streamlit_app.py)        │
 │   • Live Streaming Output   • Human-in-the-Loop Approve / Reject  │
 │   • Interactive CSV Editor  • Real-Time Audit Log Viewer          │
 └─────────────────────────────────┬─────────────────────────────────┘
                                   │
                                   ▼
 ┌───────────────────────────────────────────────────────────────────┐
-│               LANGGRAPH MULTI-AGENT ORCHESTRATOR                  │
+│           STEP 2: LANGGRAPH MULTI-AGENT ORCHESTRATOR              │
 │                                                                   │
 │  [START] ──▶ [Node 1: Auditor Agent] ──▶ (HITL Checkpoint)        │
 │                   │                            │                  │
@@ -41,13 +41,16 @@ The application audits warehouse inventory (`inventory.csv`) against company Sta
 
 ---
 
-## Tech Stack & Core Concepts
+## Core Concepts Covered
 
-* **LLM & GenAI ([Ollama](https://ollama.com)):** Runs `qwen2.5:3b` locally on CPU with zero API costs.
-* **RAG ([LangChain Core](https://langchain.com)):** Loads and chunks `company_policies.txt` using `RecursiveCharacterTextSplitter`, embeds chunks with `nomic-embed-text`, and retrieves rules via `InMemoryVectorStore`.
-* **Connectivity ([Model Context Protocol](https://modelcontextprotocol.io)):** Decouples business tools (`mcp_server.py`) from the AI agents using FastMCP over `stdio`.
-* **Multi-Agent Orchestration & HITL ([LangGraph](https://langchain.comlanggraph)):** Splits responsibilities between a read-only **Auditor Agent** and an action-taking **Dispatcher Agent**, using `MemorySaver` and `interrupt_before` to require human sign-off before notifications fire.
-* **Frontend ([Streamlit](https://streamlit.io)):** Streams agent steps live, supports inline editing of `inventory.csv`, and displays thread-safe execution logs.
+| Concept | Role in This Project | Implementation |
+| :--- | :--- | :--- |
+| **LLM & GenAI** | Reasoning, tool selection, and natural-language summaries | [Ollama](https://ollama.com) (`qwen2.5:3b` running locally on CPU) |
+| **RAG (Retrieval-Augmented Generation)** | Grounds the AI in private SOP rules instead of guessing | `RecursiveCharacterTextSplitter` + `nomic-embed-text` + `InMemoryVectorStore` |
+| **MCP (Model Context Protocol)** | Standardized "USB-C" bridge connecting AI to external tools and data | `mcp_server.py` built with FastMCP over `stdio` |
+| **LangChain** | Connects prompts, local models, vector retrievers, and MCP adapters | `create_agent` + `langchain-mcp-adapters` |
+| **LangGraph** | Multi-agent state orchestration, streaming, and Human-in-the-Loop pauses | `StateGraph` + `MemorySaver` + `interrupt_before` |
+| **Streamlit** | Interactive web frontend for live streaming, CSV editing, and approvals | `streamlit_app.py` |
 
 ---
 
@@ -55,32 +58,35 @@ The application audits warehouse inventory (`inventory.csv`) against company Sta
 
 ```text
 ai-stack-demo/
-├── streamlit_app.py        # Main Streamlit dashboard + LangGraph HITL multi-agent app
-├── multi_agent_app.py      # CLI version of the LangGraph multi-agent workflow
-├── agent_app.py            # CLI version of the single-agent RAG + MCP prototype
-├── mcp_server.py           # Standalone FastMCP server exposing inventory & alert tools
+├── mcp_server.py           # Shared FastMCP tool server (CSV lookup, alerts, email, audit log)
 ├── inventory.csv           # Sample warehouse SKU stock dataset
 ├── company_policies.txt    # SOP rules indexed into the local RAG vector store
+│
+├── agent_app.py            # [Step 1] Single-Agent CLI (LLM + RAG + MCP)
+├── multi_agent_app.py      # [Step 2] Multi-Agent CLI (LangGraph Auditor -> Dispatcher)
+├── streamlit_app.py        # [Step 3] Full-Stack Web UI + Streaming + Human-in-the-Loop
+│
 ├── requirements.txt        # Python dependencies
+├── README.md               # Step-by-step learning guide
 └── .gitignore              # Excludes venv, cache, and runtime logs
 ```
 
 ---
 
-## Quickstart Guide
+## Quickstart Setup
 
-### 1. Prerequisites
-Install [Ollama](https://ollama.com) and pull the two local models:
+### 1. Install Ollama & Pull Free Local Models
+Download [Ollama](https://ollama.com) and pull the chat model and embedding model:
 
 ```bash
 ollama pull qwen2.5:3b
 ollama pull nomic-embed-text
 ```
 
-### 2. Clone & Install Python Dependencies
+### 2. Clone Repository & Install Python Dependencies
 
 ```bash
-git clone https://github.com/urmitpatelgit/ai-stack-demo
+git clone https://github.com<your-username>/ai-stack-demo.git
 cd ai-stack-demo
 
 python -m venv venv
@@ -92,19 +98,54 @@ python -m venv venv
 pip install -r requirements.txt
 ```
 
-### 3. Run the Streamlit Web Dashboard
+---
 
-```bash
-streamlit run streamlit_app.py
-```
+## Step-by-Step Learning Path
 
-Open `http://localhost:8501` in your browser, click **Start Inventory Audit (Node 1)**, review the streamed Auditor Report, and click **Approve & Dispatch Alerts (Node 2)** to trigger the MCP tools.
+### Step 1: Single-Agent RAG + MCP (`agent_app.py`)
+**Goal:** Understand how a single LLM connects to external data via **MCP** and retrieves company rules from a local file via **RAG**.
+
+* **What happens:** One agent receives all tools (`search_company_policies`, `get_all_inventory`, `send_team_alert`, `send_escalation_email`), reads `company_policies.txt`, scans `inventory.csv`, and executes the matching actions.
+* **Run it:**
+  ```bash
+  python agent_app.py
+  ```
+* **Key Takeaway:** Works well for simple tasks, but giving a compact 3B model both read and write tools at the same time increases the risk of wrong tool calls.
+
+---
+
+### Step 2: Multi-Agent Orchestration with LangGraph (`multi_agent_app.py`)
+**Goal:** Learn how **LangGraph** improves reliability by splitting one overloaded agent into two specialized nodes sharing a typed state (`AuditState`).
+
+* **What happens:**
+  1. **Node 1 (`Auditor Agent`):** Only gets read-only tools (`search_company_policies`, `get_all_inventory`) and writes an `audit_report` into shared state.
+  2. **Node 2 (`Dispatcher Agent`):** Only gets action tools (`send_team_alert`, `send_escalation_email`) and executes notifications based on Node 1's report.
+* **Run it:**
+  ```bash
+  python multi_agent_app.py
+  ```
+* **Key Takeaway:** Role separation (Read vs. Write) prevents premature actions and makes smaller local LLMs much more dependable.
+
+---
+
+### Step 3: Full-Stack Web UI with Streaming & Human-in-the-Loop (`streamlit_app.py`)
+**Goal:** Add production safety and observability using **LangGraph checkpoints** and a **Streamlit** browser dashboard.
+
+* **What happens:**
+  1. **Live Streaming (`stream_mode="updates"`):** Node 1 streams its audit report to the UI as soon as it completes.
+  2. **Human-in-the-Loop (`interrupt_before=["dispatcher"]`):** Execution pauses before Node 2 runs, saving state in `MemorySaver`.
+  3. **Operator Approval:** You review the report in the browser and click **Approve & Dispatch Alerts** (or **Reject & Cancel**) before any external alert or email fires.
+* **Run it:**
+  ```bash
+  streamlit run streamlit_app.py
+  ```
+  Open `http://localhost:8501` in your browser to run audits, edit `inventory.csv` live, and inspect `audit_log.txt`.
 
 ---
 
 ## Optional: Enable Real Gmail Escalation Emails
 
-By default, `send_escalation_email` safely logs simulated emails to `audit_log.txt`. To send real emails via Gmail SMTP, set these environment variables before launching Streamlit:
+By default, `send_escalation_email` logs simulated emails to `audit_log.txt`. To send real emails via Gmail SMTP, set these environment variables before running any step:
 
 ```powershell
 # Windows PowerShell
@@ -116,8 +157,8 @@ streamlit run streamlit_app.py
 
 ---
 
-## Key Engineering Takeaways
+## Engineering Lessons Learned
 
-* **Tool-Side Status Classification:** Offloading deterministic threshold math (`0` -> `OUT OF STOCK`, `< 10` -> `LOW STOCK`) to the MCP tool eliminates numeric reasoning errors in compact 3B local LLMs.
-* **Thread-Safe MCP File I/O:** Because LLMs invoke multiple MCP tools in parallel, `mcp_server.py` uses `threading.Lock()` to prevent race conditions when writing to `audit_log.txt`.
-* **Role Separation via LangGraph:** Splitting read tools (Auditor) from write tools (Dispatcher) behind a human approval checkpoint prevents unintended side effects.
+1. **Tool-Side Status Classification:** Offloading threshold math (`0` -> `OUT OF STOCK`, `< 10` -> `LOW STOCK`) to `mcp_server.py` prevents numeric reasoning mistakes in compact 3B local models.
+2. **Thread-Safe MCP File I/O:** Because LLMs often trigger parallel tool calls in a single turn, `mcp_server.py` wraps file writes in `threading.Lock()` so concurrent logs never overwrite each other.
+3. **Checkpoint-Driven HITL:** Using `interrupt_before` in LangGraph ensures external side effects (emails/alerts) require explicit human sign-off.
